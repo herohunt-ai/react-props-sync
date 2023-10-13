@@ -2,17 +2,17 @@
   "Function component with props": {
     "prefix": "rfcp",
     "body": [
-      "interface ExampleProps {",
-      "  |",
+      "interface ${TM_FILENAME_BASE}Props {",
+      "  $1: $2",
       "}",
       "",
-      "function Example({ | }: ExampleProps) {",
+      "function ${TM_FILENAME_BASE}({ $1 }: ${TM_FILENAME_BASE}Props) {",
       "  return (",
-      "    |",
+      "    $0",
       "  )",
       "}",
       "",
-      "export default Example;"
+      "export default ${TM_FILENAME_BASE};"
     ],
     "description": "React function component with props interface"
   }
