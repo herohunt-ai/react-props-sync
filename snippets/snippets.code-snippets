@@ -1,1 +1,19 @@
-{}
+{
+  "Function component with props": {
+    "prefix": "rfcp",
+    "body": [
+      "interface ExampleProps {",
+      "  |",
+      "}",
+      "",
+      "function Example({ | }: ExampleProps) {",
+      "  return (",
+      "    |",
+      "  )",
+      "}",
+      "",
+      "export default Example;"
+    ],
+    "description": "React function component with props interface"
+  }
+}
