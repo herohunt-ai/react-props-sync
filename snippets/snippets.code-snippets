@@ -16,7 +16,7 @@
     "prefix": "rfcp",
     "body": [
       "interface ${TM_FILENAME_BASE}Props {",
-      "  $1: $2;",
+      "  ${1:children}: ${2:ReactNode};",
       "}",
       "",
       "function ${TM_FILENAME_BASE}({ $1 }: ${TM_FILENAME_BASE}Props) {",
@@ -52,7 +52,7 @@
       "import { ForwardedRef, forwardRef } from \"react\";",
       "",
       "interface ${TM_FILENAME_BASE}Props {",
-      "  $2: $3;",
+      "  ${2:children}: ${3:ReactNode};",
       "}",
       "",
       "function ${TM_FILENAME_BASE}(",
