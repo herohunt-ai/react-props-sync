@@ -1,19 +1,70 @@
 {
-  "Function component with props": {
-    "prefix": "rfcp",
+  "Function component without props": {
+    "prefix": "rfc",
     "body": [
-      "interface ${TM_FILENAME_BASE}Props {",
-      "  $1: $2",
-      "}",
-      "",
-      "function ${TM_FILENAME_BASE}({ $1 }: ${TM_FILENAME_BASE}Props) {",
+      "function ${TM_FILENAME_BASE}() {",
       "  return (",
       "    $0",
-      "  )",
+      "  );",
       "}",
       "",
       "export default ${TM_FILENAME_BASE};"
     ],
     "description": "React function component with props interface"
+  },
+  "Function component with props": {
+    "prefix": "rfcp",
+    "body": [
+      "interface ${TM_FILENAME_BASE}Props {",
+      "  $1: $2;",
+      "}",
+      "",
+      "function ${TM_FILENAME_BASE}({ $1 }: ${TM_FILENAME_BASE}Props) {",
+      "  return (",
+      "    $0",
+      "  );",
+      "}",
+      "",
+      "export default ${TM_FILENAME_BASE};"
+    ],
+    "description": "React function component with props interface"
+  },
+  "Function component without props, with forwardRef": {
+    "prefix": "rfcf",
+    "body": [
+      "import { ForwardedRef, forwardRef } from \"react\";",
+      "",
+      "function ${TM_FILENAME_BASE}(",
+      "  _props: Record<string, never>,",
+      "  ref: ForwardedRef<$1>,",
+      ") {",
+      "  return (",
+      "    $0",
+      "  );",
+      "}",
+      "",
+      "export default forwardRef(${TM_FILENAME_BASE});"
+    ]
+  },
+  "Function component with props, with forwardRef": {
+    "prefix": "rfcpf",
+    "body": [
+      "import { ForwardedRef, forwardRef } from \"react\";",
+      "",
+      "interface ${TM_FILENAME_BASE}Props {",
+      "  $2: $3;",
+      "}",
+      "",
+      "function ${TM_FILENAME_BASE}(",
+      "  { $2 }: ${TM_FILENAME_BASE}Props,",
+      "  ref: ForwardedRef<$1>,",
+      ") {",
+      "  return (",
+      "    $0",
+      "  );",
+      "}",
+      "",
+      "export default forwardRef(${TM_FILENAME_BASE});"
+    ]
   }
 }
