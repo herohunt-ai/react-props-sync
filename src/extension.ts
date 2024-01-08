@@ -1,5 +1,8 @@
 import * as vscode from "vscode";
 
+const importSnippetString = 'import { ReactNode } from "react";\n';
+const componentNameRegex = /export default (function )?(\w+)/;
+
 export function activate(context: vscode.ExtensionContext) {
   function registerCommand(command: string, callback: (...args: any[]) => any) {
     const disposable = vscode.commands.registerCommand(command, callback);
@@ -14,7 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {}
 
-function addProps(withChildren: boolean) {
+async function addProps(withChildren: boolean) {
   const editor = vscode.window.activeTextEditor;
   if (editor === undefined) {
     vscode.window.showErrorMessage("No active editor");
@@ -29,16 +32,21 @@ function addProps(withChildren: boolean) {
     return;
   }
 
-  const { name: componentName, index: interfaceIndex } = componentInfo;
+  // insert ReactNode import
+  if (withChildren) {
+    const importSnippet = new vscode.SnippetString(importSnippetString);
+    await editor.insertSnippet(importSnippet, editor.document.positionAt(0));
+  }
 
   // insert interface
+  const { name: componentName, index: interfaceIndex } = componentInfo;
   const interfaceSnippet = getInterfaceSnippet(componentName, withChildren);
-  const interfacePosition = editor.document.positionAt(interfaceIndex);
-  editor.insertSnippet(interfaceSnippet, interfacePosition);
+  const interfacePosition = withChildren
+    ? editor.document.positionAt(interfaceIndex + importSnippetString.length)
+    : editor.document.positionAt(interfaceIndex);
+  await editor.insertSnippet(interfaceSnippet, interfacePosition);
 
 }
-
-const componentNameRegex = /export default (function )?(\w+)/;
 
 function getComponentInfo(
   text: string
@@ -62,10 +70,9 @@ function getComponentInfo(
   );
   if (componentDefinitionIndex === -1) return;
 
-  const lineStartIndex = text.lastIndexOf("\n", componentDefinitionIndex);
-  if (lineStartIndex === -1) return;
+  const lineStartIndex = text.lastIndexOf("\n", componentDefinitionIndex) + 1;
 
-  return { name, index: lineStartIndex + 1 };
+  return { name, index: lineStartIndex };
 }
 
 function getInterfaceSnippet(
