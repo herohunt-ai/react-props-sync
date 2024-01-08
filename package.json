@@ -14,8 +14,12 @@
   "contributes": {
     "commands": [
       {
-        "command": "simple-react-snippets.helloWorld",
-        "title": "Hello World"
+        "command": "simple-react-snippets.addProps",
+        "title": "Add props"
+      },
+      {
+        "command": "simple-react-snippets.addPropsWithChildren",
+        "title": "Add props with children"
       }
     ],
     "snippets": [
