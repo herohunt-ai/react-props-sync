@@ -24,7 +24,7 @@ async function addProps(withChildren: boolean) {
     return;
   }
 
-  const entireText = editor.document.getText();
+  let entireText = editor.document.getText();
 
   const componentInfo = getComponentInfo(entireText);
   if (componentInfo === undefined) {
@@ -32,20 +32,27 @@ async function addProps(withChildren: boolean) {
     return;
   }
 
+  let { name: componentName, index: componentIndex } = componentInfo;
+
   // insert ReactNode import
   if (withChildren) {
     const importSnippet = new vscode.SnippetString(importSnippetString);
     await editor.insertSnippet(importSnippet, editor.document.positionAt(0));
+    componentIndex += importSnippet.value.length;
   }
 
-  // insert interface
-  const { name: componentName, index: interfaceIndex } = componentInfo;
-  const interfaceSnippet = getInterfaceSnippet(componentName, withChildren);
-  const interfacePosition = withChildren
-    ? editor.document.positionAt(interfaceIndex + importSnippetString.length)
-    : editor.document.positionAt(interfaceIndex);
-  await editor.insertSnippet(interfaceSnippet, interfacePosition);
+  // insert props
+  entireText = editor.document.getText();
+  const propsIndex = getPropsIndex(entireText, componentIndex);
+  const propsPosition = editor.document.positionAt(propsIndex);
+  const propsSnippet = new vscode.SnippetString(`{ }: ${componentName}Props`);
+  await editor.insertSnippet(propsSnippet, propsPosition);
 
+  // insert interface
+  const interfaceSnippet = getInterfaceSnippet(componentName, withChildren);
+  const interfacePosition = editor.document.positionAt(componentIndex);
+  await editor.insertSnippet(interfaceSnippet, interfacePosition);
+  componentIndex += interfaceSnippet.value.length - 2;
 }
 
 function getComponentInfo(
@@ -64,13 +71,13 @@ function getComponentInfo(
   }
 
   // get component's first line
-  const componentDefinitionIndex = Math.max(
+  const componentIndex = Math.max(
     text.indexOf(`function ${name}(`),
     text.indexOf(`${name} = (`)
   );
-  if (componentDefinitionIndex === -1) return;
+  if (componentIndex === -1) return;
 
-  const lineStartIndex = text.lastIndexOf("\n", componentDefinitionIndex) + 1;
+  const lineStartIndex = text.lastIndexOf("\n", componentIndex) + 1;
 
   return { name, index: lineStartIndex };
 }
@@ -88,4 +95,8 @@ function getInterfaceSnippet(
   return new vscode.SnippetString(
     `interface ${componentName}Props {${linesString}}\n\n`
   );
+}
+
+function getPropsIndex(text: string, componentIndex: number): number {
+  return text.indexOf("(", componentIndex) + 1;
 }
