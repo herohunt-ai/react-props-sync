@@ -13,6 +13,101 @@ export function activate(context: vscode.ExtensionContext) {
   registerCommand("simple-react-snippets.addPropsWithChildren", () =>
     addProps(true)
   );
+
+  vscode.workspace.onDidChangeTextDocument(async (event) => {
+    if (event.contentChanges.length === 0) return;
+
+    const startTime = performance.now();
+
+    const symbols: (vscode.DocumentSymbol & vscode.SymbolInformation)[] =
+      await vscode.commands.executeCommand(
+        "vscode.executeDocumentSymbolProvider",
+        event.document.uri
+      );
+
+    const propsSymbol = symbols.find((s) => s.name.endsWith("Props"));
+    if (propsSymbol === undefined) return;
+
+    const cursorIndex = offset(event.contentChanges[0]?.range.start);
+    const propsRange = propsSymbol.location.range;
+    const isInsideProps =
+      offset(propsRange.start) < cursorIndex &&
+      cursorIndex < offset(propsRange.end);
+    if (!isInsideProps) return;
+
+    const interfaceProps = propsSymbol.children.map((s) => s.name);
+
+    const entireText = event.document.getText();
+    const componentName = getComponentName(entireText);
+    const componentSymbol = symbols.find((s) => s.name === componentName);
+    if (componentSymbol === undefined) return;
+
+    const propsListStart =
+      entireText.indexOf("{", offset(componentSymbol.selectionRange.end)) + 1;
+    const propsListEnd = entireText.indexOf("}", propsListStart);
+    const propsList = entireText
+      .slice(propsListStart, propsListEnd)
+      .split(",")
+      .map((s) => s.trim());
+
+    const hasTrailingComma = propsList.at(-1) === "";
+
+    if (hasTrailingComma) propsList.pop();
+
+    const editor = vscode.window.activeTextEditor;
+    if (editor === undefined) return;
+
+    const propsToAdd = interfaceProps.filter(
+      (prop) => !propsList.includes(prop)
+    );
+
+    const insertions = propsToAdd.map((prop) => {
+      const insertPosition = event.document.positionAt(propsListEnd);
+      const insertSnippet = `${hasTrailingComma ? "" : ","}${prop}, `;
+      return new vscode.TextEdit(
+        new vscode.Range(insertPosition, insertPosition),
+        insertSnippet
+      );
+    });
+
+    await editor.edit((editBuilder) => {
+      for (const insertion of insertions) {
+        editBuilder.insert(insertion.range.start, insertion.newText);
+      }
+    });
+
+    const propsToRemove = propsList.filter(
+      (prop) => !interfaceProps.includes(prop)
+    );
+
+    const deletions = propsToRemove.map((prop) => {
+      const propStart = entireText.indexOf(prop, propsListStart);
+      const propEnd = Math.min(
+        entireText.indexOf(",", propStart) + 1,
+        entireText.indexOf("}", propStart)
+      );
+      return new vscode.Range(
+        event.document.positionAt(propStart),
+        event.document.positionAt(propEnd)
+      );
+    });
+
+    await editor.edit((editBuilder) => {
+      for (const deletion of deletions) {
+        editBuilder.delete(deletion);
+      }
+    });
+
+    const endTime = performance.now();
+    console.log(`\ntook ${endTime - startTime} milliseconds\n\n`);
+    return;
+
+    function offset(position: vscode.Position) {
+      return event.document.offsetAt(position);
+    }
+  });
+
+  console.log("simple-react-snippets is now active!");
 }
 
 export function deactivate() {}
@@ -26,13 +121,17 @@ async function addProps(withChildren: boolean) {
 
   let entireText = editor.document.getText();
 
-  const componentInfo = getComponentInfo(entireText);
-  if (componentInfo === undefined) {
+  const componentName = getComponentName(entireText);
+  if (componentName === undefined) {
     vscode.window.showErrorMessage("Could not find component name");
     return;
   }
 
-  let { name: componentName, index: componentIndex } = componentInfo;
+  let componentIndex = getComponentIndex(entireText, componentName);
+  if (componentIndex === undefined) {
+    vscode.window.showErrorMessage("Could not find component location");
+    return;
+  }
 
   // insert ReactNode import
   if (withChildren) {
@@ -55,10 +154,7 @@ async function addProps(withChildren: boolean) {
   componentIndex += interfaceSnippet.value.length - 2;
 }
 
-function getComponentInfo(
-  text: string
-): { name: string; index: number } | undefined {
-  // get component name
+function getComponentName(text: string): string | undefined {
   const match = componentNameRegex.exec(text);
   const name = match?.[2];
 
@@ -69,17 +165,16 @@ function getComponentInfo(
   ) {
     return;
   }
+  return name;
+}
 
-  // get component's first line
+function getComponentIndex(text: string, name: string): number | undefined {
   const componentIndex = Math.max(
     text.indexOf(`function ${name}(`),
     text.indexOf(`${name} = (`)
   );
   if (componentIndex === -1) return;
-
-  const lineStartIndex = text.lastIndexOf("\n", componentIndex) + 1;
-
-  return { name, index: lineStartIndex };
+  return text.lastIndexOf("\n", componentIndex) + 1;
 }
 
 function getInterfaceSnippet(
