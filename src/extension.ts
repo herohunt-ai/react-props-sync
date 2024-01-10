@@ -14,103 +14,145 @@ export function activate(context: vscode.ExtensionContext) {
     addProps(true)
   );
 
+  let timeout: NodeJS.Timeout;
   vscode.workspace.onDidChangeTextDocument(async (event) => {
     if (event.contentChanges.length === 0) return;
 
+    clearTimeout(timeout);
+    timeout = setTimeout(() => handleChangeTextDocument(event), 500);
+  });
+
+  async function handleChangeTextDocument(
+    event: vscode.TextDocumentChangeEvent
+  ) {
     const startTime = performance.now();
 
-    const symbols: (vscode.DocumentSymbol & vscode.SymbolInformation)[] =
-      await vscode.commands.executeCommand(
-        "vscode.executeDocumentSymbolProvider",
-        event.document.uri
-      );
-
-    const propsSymbol = symbols.find((s) => s.name.endsWith("Props"));
-    if (propsSymbol === undefined) return;
-
-    const cursorIndex = offset(event.contentChanges[0]?.range.start);
-    const propsRange = propsSymbol.location.range;
-    const isInsideProps =
-      offset(propsRange.start) < cursorIndex &&
-      cursorIndex < offset(propsRange.end);
-    if (!isInsideProps) return;
-
-    const interfaceProps = propsSymbol.children.map((s) => s.name);
-
-    const entireText = event.document.getText();
-    const componentName = getComponentName(entireText);
-    const componentSymbol = symbols.find((s) => s.name === componentName);
-    if (componentSymbol === undefined) return;
-
-    const propsListStart =
-      entireText.indexOf("{", offset(componentSymbol.selectionRange.end)) + 1;
-    const propsListEnd = entireText.indexOf("}", propsListStart);
-    const propsList = entireText
-      .slice(propsListStart, propsListEnd)
-      .split(",")
-      .map((s) => s.trim());
-
-    const hasTrailingComma = propsList.at(-1) === "";
-
-    if (hasTrailingComma) propsList.pop();
-
-    const editor = vscode.window.activeTextEditor;
-    if (editor === undefined) return;
-
-    const propsToAdd = interfaceProps.filter(
-      (prop) => !propsList.includes(prop)
-    );
-
-    const insertions = propsToAdd.map((prop) => {
-      const insertPosition = event.document.positionAt(propsListEnd);
-      const insertSnippet = `${hasTrailingComma ? "" : ","}${prop}, `;
-      return new vscode.TextEdit(
-        new vscode.Range(insertPosition, insertPosition),
-        insertSnippet
-      );
-    });
-
-    await editor.edit((editBuilder) => {
-      for (const insertion of insertions) {
-        editBuilder.insert(insertion.range.start, insertion.newText);
-      }
-    });
-
-    const propsToRemove = propsList.filter(
-      (prop) => !interfaceProps.includes(prop)
-    );
-
-    const deletions = propsToRemove.map((prop) => {
-      const propStart = entireText.indexOf(prop, propsListStart);
-      const propEnd = Math.min(
-        entireText.indexOf(",", propStart) + 1,
-        entireText.indexOf("}", propStart)
-      );
-      return new vscode.Range(
-        event.document.positionAt(propStart),
-        event.document.positionAt(propEnd)
-      );
-    });
-
-    await editor.edit((editBuilder) => {
-      for (const deletion of deletions) {
-        editBuilder.delete(deletion);
-      }
-    });
+    await syncProps(event);
 
     const endTime = performance.now();
-    console.log(`\ntook ${endTime - startTime} milliseconds\n\n`);
-    return;
-
-    function offset(position: vscode.Position) {
-      return event.document.offsetAt(position);
-    }
-  });
+    console.log(`\nSyncing props took ${endTime - startTime} milliseconds\n\n`);
+  }
 
   console.log("simple-react-snippets is now active!");
 }
 
 export function deactivate() {}
+
+async function syncProps(event: vscode.TextDocumentChangeEvent) {
+  const symbols: (vscode.DocumentSymbol & vscode.SymbolInformation)[] =
+    await vscode.commands.executeCommand(
+      "vscode.executeDocumentSymbolProvider",
+      event.document.uri
+    );
+
+  const interfaceSymbol = symbols.find((s) => s.name.endsWith("Props"));
+  if (interfaceSymbol === undefined) return;
+
+  const cursorIndex = offset(event.contentChanges[0]?.range.start);
+  const interfaceRange = interfaceSymbol.location.range;
+  const isInsideProps =
+    offset(interfaceRange.start) < cursorIndex &&
+    cursorIndex < offset(interfaceRange.end);
+  if (!isInsideProps) return;
+
+  const interfaceProps = interfaceSymbol.children.map((s) => s.name);
+
+  const entireText = event.document.getText();
+  const componentName = getComponentName(entireText);
+  const componentSymbol = symbols.find((s) => s.name === componentName);
+  if (componentSymbol === undefined) return;
+
+  const propsListStart =
+    entireText.indexOf("{", offset(componentSymbol.selectionRange.end)) + 1;
+  const propsListEnd = entireText.indexOf("}", propsListStart);
+  const propsList = entireText
+    .slice(propsListStart, propsListEnd)
+    .split(",")
+    .map((s) => s.trim());
+
+  const hasTrailingComma = propsList.at(-1) === "";
+
+  if (hasTrailingComma) propsList.pop();
+
+  const editor = vscode.window.activeTextEditor;
+  if (editor === undefined) return;
+
+  const propsToAdd = interfaceProps.filter((prop) => !propsList.includes(prop));
+
+  const propsToRemove = propsList.filter(
+    (prop) => !interfaceProps.includes(prop)
+  );
+
+  if (propsToAdd.length === 0 && propsToRemove.length === 0) return;
+
+  const insertions = propsToAdd.map((prop) => {
+    const insertPosition = event.document.positionAt(propsListEnd);
+    const insertSnippet = `${hasTrailingComma ? "" : ","}${prop}, `;
+    return new vscode.TextEdit(
+      new vscode.Range(insertPosition, insertPosition),
+      insertSnippet
+    );
+  });
+
+  await editor.edit((editBuilder) => {
+    for (const insertion of insertions) {
+      editBuilder.insert(insertion.range.start, insertion.newText);
+    }
+  });
+
+  const deletions = propsToRemove.map((prop) => {
+    const propStart = entireText.indexOf(prop, propsListStart);
+    const propEnd = Math.min(
+      entireText.indexOf(",", propStart) + 1,
+      entireText.indexOf("}", propStart)
+    );
+    return new vscode.Range(
+      event.document.positionAt(propStart),
+      event.document.positionAt(propEnd)
+    );
+  });
+
+  await editor.edit((editBuilder) => {
+    for (const deletion of deletions) {
+      editBuilder.delete(deletion);
+    }
+  });
+
+  const newEntireText = event.document.getText();
+  const newPropsListEnd = newEntireText.indexOf("}", propsListStart);
+  const propsRange = new vscode.Range(
+    event.document.positionAt(propsListStart - 1),
+    event.document.positionAt(newPropsListEnd + 1)
+  );
+
+  // get text in propsRange
+  const bb = editor.document.getText(propsRange);
+  console.log(bb);
+
+  // running = true;
+  // console.log("formatting start");
+
+  // await new Promise((resolve) => setTimeout(resolve, 500));
+
+  // const a: any[] = await vscode.commands.executeCommand(
+  //   "vscode.executeFormatRangeProvider",
+  //   event.document.uri,
+  //   propsRange
+  // );
+
+  // await editor.edit((editBuilder) => {
+  //   for (const edit of a) {
+  //     editBuilder.replace(edit.range, edit.newText);
+  //   }
+  // });
+  // running = false;
+  // console.log("formatting end");
+  // console.log(a);
+
+  function offset(position: vscode.Position) {
+    return event.document.offsetAt(position);
+  }
+}
 
 async function addProps(withChildren: boolean) {
   const editor = vscode.window.activeTextEditor;
