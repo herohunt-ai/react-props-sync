@@ -49,7 +49,19 @@ export async function syncProps(event: vscode.TextDocumentChangeEvent) {
 
     const propsListStart =
       entireText.indexOf("{", offset(componentSymbol.selectionRange.end)) + 1;
+
     const propsListEnd = entireText.indexOf("}", propsListStart);
+
+    const endSymbols = [interfaceSymbol.name, ")", "{", ":"];
+    if (
+      endSymbols.some((s) => {
+        const end = entireText.indexOf(s, propsListStart);
+        if (end === -1) return false;
+        return entireText.indexOf(s, propsListStart) < propsListEnd;
+      })
+    )
+      return;
+
     const propsList = entireText
       .slice(propsListStart, propsListEnd)
       .split(",")
