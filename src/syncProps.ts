@@ -4,7 +4,7 @@ export async function syncProps(event: vscode.TextDocumentChangeEvent) {
   const editor = vscode.window.activeTextEditor;
   if (editor === undefined) return;
 
-  const entireText = event.document.getText();
+  let entireText = event.document.getText();
 
   const propsLists = await getPropsLists();
   if (propsLists === undefined) return;
@@ -73,12 +73,23 @@ export async function syncProps(event: vscode.TextDocumentChangeEvent) {
       );
     });
 
+    await editor!.edit((editBuilder) => {
+      for (const insertion of insertions) {
+        editBuilder.insert(insertion.range.start, insertion.newText);
+      }
+    });
+
+    entireText = event.document.getText();
     const deletions = propsToRemove.map((prop) => {
       let propStart = entireText.indexOf(prop, propsListStart);
 
       const lastNewLineIndex = entireText.lastIndexOf("\n", propStart);
       const lastCommaIndex = entireText.lastIndexOf(",", propStart);
-      if (lastNewLineIndex > lastCommaIndex) propStart = lastNewLineIndex;
+      if (
+        lastNewLineIndex > propsListStart &&
+        lastNewLineIndex > lastCommaIndex
+      )
+        propStart = lastNewLineIndex;
 
       const propEnd = Math.min(
         entireText.indexOf(",", propStart) + 1,
@@ -92,9 +103,6 @@ export async function syncProps(event: vscode.TextDocumentChangeEvent) {
     });
 
     await editor!.edit((editBuilder) => {
-      for (const insertion of insertions) {
-        editBuilder.insert(insertion.range.start, insertion.newText);
-      }
       for (const deletion of deletions) {
         editBuilder.delete(deletion);
       }
@@ -102,8 +110,8 @@ export async function syncProps(event: vscode.TextDocumentChangeEvent) {
   }
 
   async function formatProps() {
-    const newEntireText = event.document.getText();
-    const newPropsListEnd = newEntireText.indexOf("}", propsListStart);
+    entireText = event.document.getText();
+    const newPropsListEnd = entireText.indexOf("}", propsListStart);
     const propsRange = new vscode.Range(
       event.document.positionAt(propsListStart - 1),
       event.document.positionAt(newPropsListEnd + 1)

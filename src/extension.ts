@@ -17,6 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.workspace.onDidChangeTextDocument(async (event) => {
     if (event.contentChanges.length === 0) return;
 
+    // TODO fix debounce when typing inside props and moving outside in 500ms
     clearTimeout(timeout);
     timeout = setTimeout(() => syncProps(event), 500);
   });
