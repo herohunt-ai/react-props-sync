@@ -19,19 +19,8 @@ export function activate(context: vscode.ExtensionContext) {
     if (event.contentChanges.length === 0) return;
 
     clearTimeout(timeout);
-    timeout = setTimeout(() => handleChangeTextDocument(event), 500);
+    timeout = setTimeout(() => syncProps(event), 500);
   });
-
-  async function handleChangeTextDocument(
-    event: vscode.TextDocumentChangeEvent
-  ) {
-    const startTime = performance.now();
-
-    await syncProps(event);
-
-    const endTime = performance.now();
-    console.log(`\nSyncing props took ${endTime - startTime} milliseconds\n\n`);
-  }
 
   console.log("simple-react-snippets is now active!");
 }
@@ -94,12 +83,6 @@ async function syncProps(event: vscode.TextDocumentChangeEvent) {
     );
   });
 
-  await editor.edit((editBuilder) => {
-    for (const insertion of insertions) {
-      editBuilder.insert(insertion.range.start, insertion.newText);
-    }
-  });
-
   const deletions = propsToRemove.map((prop) => {
     const propStart = entireText.indexOf(prop, propsListStart);
     const propEnd = Math.min(
@@ -113,6 +96,9 @@ async function syncProps(event: vscode.TextDocumentChangeEvent) {
   });
 
   await editor.edit((editBuilder) => {
+    for (const insertion of insertions) {
+      editBuilder.insert(insertion.range.start, insertion.newText);
+    }
     for (const deletion of deletions) {
       editBuilder.delete(deletion);
     }
