@@ -84,11 +84,17 @@ async function syncProps(event: vscode.TextDocumentChangeEvent) {
   });
 
   const deletions = propsToRemove.map((prop) => {
-    const propStart = entireText.indexOf(prop, propsListStart);
+    let propStart = entireText.indexOf(prop, propsListStart);
+
+    const lastNewLineIndex = entireText.lastIndexOf("\n", propStart);
+    const lastCommaIndex = entireText.lastIndexOf(",", propStart);
+    if (lastNewLineIndex > lastCommaIndex) propStart = lastNewLineIndex;
+
     const propEnd = Math.min(
       entireText.indexOf(",", propStart) + 1,
       entireText.indexOf("}", propStart)
     );
+
     return new vscode.Range(
       event.document.positionAt(propStart),
       event.document.positionAt(propEnd)
