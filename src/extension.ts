@@ -125,29 +125,18 @@ async function syncProps(event: vscode.TextDocumentChangeEvent) {
     event.document.positionAt(newPropsListEnd + 1)
   );
 
-  // get text in propsRange
-  const bb = editor.document.getText(propsRange);
-  console.log(bb);
+  const formattingEdits: vscode.TextEdit[] =
+    await vscode.commands.executeCommand(
+      "vscode.executeFormatRangeProvider",
+      event.document.uri,
+      propsRange
+    );
 
-  // running = true;
-  // console.log("formatting start");
-
-  // await new Promise((resolve) => setTimeout(resolve, 500));
-
-  // const a: any[] = await vscode.commands.executeCommand(
-  //   "vscode.executeFormatRangeProvider",
-  //   event.document.uri,
-  //   propsRange
-  // );
-
-  // await editor.edit((editBuilder) => {
-  //   for (const edit of a) {
-  //     editBuilder.replace(edit.range, edit.newText);
-  //   }
-  // });
-  // running = false;
-  // console.log("formatting end");
-  // console.log(a);
+  await editor.edit((editBuilder) => {
+    for (const edit of formattingEdits) {
+      editBuilder.replace(edit.range, edit.newText);
+    }
+  });
 
   function offset(position: vscode.Position) {
     return event.document.offsetAt(position);
