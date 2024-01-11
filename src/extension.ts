@@ -70,8 +70,7 @@ async function syncProps(event: vscode.TextDocumentChangeEvent) {
     .split(",")
     .map((s) => s.trim());
 
-  const hasTrailingComma = propsList.at(-1) === "";
-
+  let hasTrailingComma = propsList.at(-1) === "";
   if (hasTrailingComma) propsList.pop();
 
   const editor = vscode.window.activeTextEditor;
@@ -88,6 +87,7 @@ async function syncProps(event: vscode.TextDocumentChangeEvent) {
   const insertions = propsToAdd.map((prop) => {
     const insertPosition = event.document.positionAt(propsListEnd);
     const insertSnippet = `${hasTrailingComma ? "" : ","}${prop}, `;
+    hasTrailingComma = true;
     return new vscode.TextEdit(
       new vscode.Range(insertPosition, insertPosition),
       insertSnippet
