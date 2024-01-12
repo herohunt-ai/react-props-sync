@@ -1,6 +1,6 @@
 {
   "name": "react-props-sync",
-  "displayName": "React Props Sync",
+  "displayName": "React Props Sync & Snippets",
   "description": "Synchronize props between the props interface and component function",
   "version": "1.0.0",
   "engines": {
