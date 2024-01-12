@@ -1,13 +1,14 @@
 {
-  "name": "simple-react-snippets",
-  "displayName": "Simple React Snippets",
-  "description": "",
-  "version": "0.0.1",
+  "name": "react-props-sync",
+  "displayName": "React Props Sync",
+  "description": "Synchronize props between the props interface and component function",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Snippets"
+    "Snippets",
+    "Other"
   ],
   "activationEvents": [
     "*"
@@ -36,8 +37,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "yarn run compile && yarn run lint",
-    "lint": "eslint src --ext ts",
-    "test": "vscode-test"
+    "lint": "eslint src --ext ts"
   },
   "devDependencies": {
     "@types/vscode": "^1.85.0",
